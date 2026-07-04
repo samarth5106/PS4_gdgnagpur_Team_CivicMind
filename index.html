@@ -1,0 +1,1719 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SansadSetu Command Center</title>
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script defer src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7f4;
+      --panel: #ffffff;
+      --panel-2: #eef3ef;
+      --ink: #1d2327;
+      --muted: #647067;
+      --line: #d9dfda;
+      --line-strong: #bbc6bd;
+      --saffron: #d97d2b;
+      --green: #16845f;
+      --blue: #3066be;
+      --red: #c43d3d;
+      --yellow: #b9820f;
+      --purple: #7357b6;
+      --shadow: 0 18px 42px rgba(33, 42, 35, 0.12);
+      --radius: 8px;
+      --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      color: var(--ink);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.92), rgba(246,247,244,0.9)),
+        repeating-linear-gradient(90deg, rgba(22, 132, 95, 0.05) 0 1px, transparent 1px 42px),
+        repeating-linear-gradient(0deg, rgba(217, 125, 43, 0.05) 0 1px, transparent 1px 42px),
+        var(--bg);
+      font-family: var(--font);
+      letter-spacing: 0;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 14px 22px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(16px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      flex: 0 0 auto;
+      border: 1px solid rgba(22, 132, 95, 0.35);
+      border-radius: var(--radius);
+      background: linear-gradient(145deg, #ffffff, #e4efe8);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.72);
+    }
+
+    .brand-title {
+      margin: 0;
+      font-size: clamp(1.15rem, 2vw, 1.55rem);
+      font-weight: 780;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .brand-subtitle {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      white-space: nowrap;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      height: 34px;
+      padding: 0 11px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 650;
+      white-space: nowrap;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 5px rgba(22, 132, 95, 0.14);
+    }
+
+    .shell {
+      width: min(1720px, 100%);
+      margin: 0 auto;
+      padding: 18px;
+      display: grid;
+      grid-template-columns: minmax(320px, 390px) minmax(0, 1fr);
+      gap: 18px;
+    }
+
+    .left-rail,
+    .workbench {
+      min-width: 0;
+    }
+
+    .left-rail {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 14px;
+    }
+
+    .workbench {
+      display: grid;
+      grid-template-rows: auto minmax(470px, 1.2fr) auto;
+      gap: 14px;
+    }
+
+    .panel {
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      min-width: 0;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panel-title {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-width: 0;
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 760;
+      line-height: 1.2;
+    }
+
+    .panel-body {
+      padding: 16px;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(150px, 1fr));
+      gap: 12px;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.86);
+      padding: 13px 14px;
+      min-height: 92px;
+    }
+
+    .metric-label {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .metric-value {
+      margin: 7px 0 0;
+      font-size: clamp(1.6rem, 3.5vw, 2.15rem);
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .metric-note {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.35;
+    }
+
+    .trend-up {
+      color: var(--red);
+      font-weight: 750;
+    }
+
+    .trend-steady {
+      color: var(--green);
+      font-weight: 750;
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field label {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 750;
+      text-transform: uppercase;
+      letter-spacing: 0.055em;
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: #fff;
+      color: var(--ink);
+      padding: 10px 11px;
+      outline: 0;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .field textarea {
+      min-height: 124px;
+      resize: vertical;
+      line-height: 1.45;
+    }
+
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus {
+      border-color: rgba(48, 102, 190, 0.75);
+      box-shadow: 0 0 0 3px rgba(48, 102, 190, 0.14);
+    }
+
+    .two-up {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 40px;
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      padding: 9px 13px;
+      color: var(--ink);
+      background: #fff;
+      font-weight: 750;
+      line-height: 1.1;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 16px rgba(33, 42, 35, 0.12);
+    }
+
+    .btn-primary {
+      color: #fff;
+      background: #165f49;
+      border-color: #165f49;
+    }
+
+    .btn-quiet {
+      border-color: var(--line-strong);
+      color: var(--muted);
+      background: #fff;
+    }
+
+    .btn-icon {
+      width: 40px;
+      padding: 0;
+    }
+
+    .icon {
+      width: 18px;
+      height: 18px;
+      flex: 0 0 auto;
+    }
+
+    .output {
+      max-height: 260px;
+      margin: 0;
+      overflow: auto;
+      border: 1px solid #cbd5d0;
+      border-radius: var(--radius);
+      background: #17211d;
+      color: #d9f2e3;
+      padding: 12px;
+      font-size: 0.78rem;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .segmented {
+      display: inline-grid;
+      grid-auto-flow: column;
+      gap: 2px;
+      padding: 3px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel-2);
+    }
+
+    .segment {
+      min-height: 32px;
+      padding: 7px 10px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+
+    .segment.active {
+      color: var(--ink);
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(33, 42, 35, 0.08);
+    }
+
+    .map-wrap {
+      position: relative;
+      min-height: 470px;
+      overflow: hidden;
+      border-radius: var(--radius);
+    }
+
+    #map,
+    .fallback-map {
+      width: 100%;
+      height: 100%;
+      min-height: 470px;
+    }
+
+    .fallback-map {
+      position: relative;
+      display: none;
+      overflow: hidden;
+      background:
+        linear-gradient(30deg, rgba(48,102,190,0.08) 12%, transparent 12% 88%, rgba(48,102,190,0.08) 88%),
+        linear-gradient(150deg, rgba(22,132,95,0.09) 14%, transparent 14% 82%, rgba(217,125,43,0.1) 82%),
+        #edf2ed;
+    }
+
+    .fallback-map::before,
+    .fallback-map::after {
+      content: "";
+      position: absolute;
+      inset: 11% 8%;
+      border: 1px solid rgba(29,35,39,0.15);
+      border-radius: 48% 52% 44% 56%;
+      transform: rotate(-8deg);
+      pointer-events: none;
+    }
+
+    .fallback-map::after {
+      inset: 20% 18%;
+      border-color: rgba(29,35,39,0.1);
+      transform: rotate(13deg);
+    }
+
+    .fallback-road {
+      position: absolute;
+      height: 3px;
+      border-radius: 999px;
+      background: rgba(80, 86, 78, 0.34);
+      transform-origin: left center;
+    }
+
+    .fallback-marker {
+      position: absolute;
+      display: grid;
+      place-items: center;
+      width: var(--size);
+      height: var(--size);
+      border: 2px solid rgba(255,255,255,0.92);
+      border-radius: 50%;
+      background: var(--color);
+      box-shadow: 0 10px 20px rgba(29,35,39,0.22);
+      transform: translate(-50%, -50%);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    .map-legend {
+      position: absolute;
+      left: 12px;
+      bottom: 12px;
+      z-index: 500;
+      display: grid;
+      gap: 7px;
+      width: min(310px, calc(100% - 24px));
+      padding: 10px 11px;
+      border: 1px solid rgba(217, 223, 218, 0.88);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: 0 12px 24px rgba(33, 42, 35, 0.12);
+      font-size: 0.78rem;
+    }
+
+    .legend-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      line-height: 1.2;
+    }
+
+    .legend-key {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 0 4px rgba(0,0,0,0.04);
+      flex: 0 0 auto;
+    }
+
+    .map-controls {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 500;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      max-width: calc(100% - 24px);
+    }
+
+    .toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 34px;
+      padding: 7px 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.92);
+      color: var(--ink);
+      font-size: 0.8rem;
+      font-weight: 740;
+      box-shadow: 0 8px 18px rgba(33, 42, 35, 0.1);
+    }
+
+    .toggle input {
+      accent-color: var(--green);
+    }
+
+    .queue-wrap {
+      overflow: auto;
+      max-height: 520px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 780px;
+      font-size: 0.86rem;
+    }
+
+    th,
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #f8faf8;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 790;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    td:first-child,
+    th:first-child {
+      padding-left: 16px;
+    }
+
+    td:last-child,
+    th:last-child {
+      padding-right: 16px;
+    }
+
+    tr:hover td {
+      background: #fbfcfb;
+    }
+
+    .complaint-text {
+      max-width: 360px;
+      line-height: 1.35;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 24px;
+      padding: 4px 7px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--muted);
+      font-size: 0.74rem;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+
+    .badge-critical {
+      border-color: rgba(196,61,61,0.32);
+      background: rgba(196,61,61,0.08);
+      color: #9f2929;
+    }
+
+    .badge-high {
+      border-color: rgba(217,125,43,0.36);
+      background: rgba(217,125,43,0.11);
+      color: #a25414;
+    }
+
+    .badge-moderate {
+      border-color: rgba(185,130,15,0.32);
+      background: rgba(185,130,15,0.1);
+      color: #7b570a;
+    }
+
+    .score {
+      display: grid;
+      gap: 5px;
+      min-width: 88px;
+    }
+
+    .score strong {
+      font-size: 1.08rem;
+      line-height: 1;
+    }
+
+    .scorebar {
+      height: 6px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #e5ebe6;
+    }
+
+    .scorebar span {
+      display: block;
+      width: var(--w);
+      height: 100%;
+      border-radius: inherit;
+      background: var(--c);
+    }
+
+    .category-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--dot);
+      flex: 0 0 auto;
+    }
+
+    .insight-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .insight {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      padding: 12px;
+      min-height: 142px;
+    }
+
+    .insight-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .rank {
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      border-radius: var(--radius);
+      color: #fff;
+      background: #1e5948;
+      font-size: 0.82rem;
+      font-weight: 820;
+      flex: 0 0 auto;
+    }
+
+    .insight h3 {
+      margin: 0;
+      font-size: 0.94rem;
+      line-height: 1.2;
+    }
+
+    .insight p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.4;
+    }
+
+    .mini-facts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 1000;
+      display: none;
+      width: min(390px, calc(100vw - 36px));
+      padding: 12px 13px;
+      border: 1px solid rgba(22, 132, 95, 0.32);
+      border-radius: var(--radius);
+      background: #fff;
+      color: var(--ink);
+      box-shadow: var(--shadow);
+      font-weight: 720;
+      line-height: 1.35;
+    }
+
+    .toast.show {
+      display: block;
+      animation: rise 0.24s ease;
+    }
+
+    @keyframes rise {
+      from { transform: translateY(8px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .leaflet-popup-content-wrapper,
+    .leaflet-popup-tip {
+      border-radius: var(--radius);
+    }
+
+    .popup {
+      min-width: 210px;
+      display: grid;
+      gap: 7px;
+      font-family: var(--font);
+    }
+
+    .popup-title {
+      font-weight: 800;
+      color: var(--ink);
+    }
+
+    .popup-meta {
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.35;
+    }
+
+    .popup-score {
+      font-weight: 820;
+      color: var(--red);
+    }
+
+    @media (max-width: 1180px) {
+      .shell {
+        grid-template-columns: 1fr;
+      }
+
+      .left-rail {
+        grid-template-columns: minmax(320px, 0.95fr) minmax(320px, 1fr);
+        grid-template-rows: auto;
+        align-items: start;
+      }
+
+      .left-rail .panel:last-child {
+        grid-column: 1 / -1;
+      }
+    }
+
+    @media (max-width: 880px) {
+      .topbar {
+        position: static;
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .top-actions {
+        justify-content: flex-start;
+      }
+
+      .shell {
+        padding: 12px;
+      }
+
+      .left-rail,
+      .metric-grid,
+      .insight-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .workbench {
+        grid-template-rows: auto minmax(520px, 1fr) auto;
+      }
+
+      .brand-subtitle {
+        white-space: normal;
+      }
+
+      .map-controls {
+        left: 12px;
+        right: 12px;
+        justify-content: flex-start;
+      }
+
+      .map-legend {
+        bottom: 10px;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .topbar {
+        padding: 12px;
+      }
+
+      .brand {
+        align-items: flex-start;
+      }
+
+      .brand-title {
+        white-space: normal;
+      }
+
+      .two-up {
+        grid-template-columns: 1fr;
+      }
+
+      .segmented {
+        width: 100%;
+        grid-auto-flow: row;
+      }
+
+      .segment {
+        width: 100%;
+      }
+
+      .metric {
+        min-height: 82px;
+      }
+
+      .button-row .btn {
+        flex: 1 1 145px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <i data-lucide="landmark" class="icon"></i>
+        </div>
+        <div>
+          <h1 class="brand-title">SansadSetu</h1>
+          <p class="brand-subtitle">AI-powered Constituency Command Center</p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <span class="status-pill"><span class="pulse-dot"></span><span id="demoClock">Live demo</span></span>
+        <button class="btn btn-quiet" id="resetBtn" type="button" title="Reset demo data">
+          <i data-lucide="rotate-ccw" class="icon"></i>
+          Reset
+        </button>
+      </div>
+    </header>
+
+    <main class="shell">
+      <aside class="left-rail">
+        <section class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title"><i data-lucide="message-square-plus" class="icon"></i> Citizen Complaint</h2>
+          </div>
+          <div class="panel-body">
+            <form id="complaintForm" class="form-grid">
+              <div class="field">
+                <label for="complaintText">Complaint Text / Voice Transcript</label>
+                <textarea id="complaintText" name="complaintText" required>Ward 7 mein 8 din se paani nahi aa raha. Tanker bhi nahi aaya, bachche school nahi ja paa rahe.</textarea>
+              </div>
+              <div class="two-up">
+                <div class="field">
+                  <label for="locality">Village / Ward</label>
+                  <select id="locality" name="locality"></select>
+                </div>
+                <div class="field">
+                  <label for="channel">Source</label>
+                  <select id="channel" name="channel">
+                    <option>WhatsApp</option>
+                    <option>Jan Sunwai</option>
+                    <option>Letter</option>
+                    <option>Call Center</option>
+                    <option>Social Media</option>
+                  </select>
+                </div>
+              </div>
+              <div class="two-up">
+                <div class="field">
+                  <label for="citizen">Citizen</label>
+                  <input id="citizen" name="citizen" value="Rakesh Kumar">
+                </div>
+                <div class="field">
+                  <label for="language">Language</label>
+                  <select id="language" name="language">
+                    <option>Hindi</option>
+                    <option>English</option>
+                    <option>Bhojpuri</option>
+                    <option>Marathi</option>
+                    <option>Tamil</option>
+                    <option>Telugu</option>
+                  </select>
+                </div>
+              </div>
+              <div class="button-row">
+                <button class="btn btn-primary" type="submit">
+                  <i data-lucide="sparkles" class="icon"></i>
+                  Triage
+                </button>
+                <button class="btn btn-quiet" type="button" id="surgeBtn">
+                  <i data-lucide="trending-up" class="icon"></i>
+                  Add Surge
+                </button>
+                <button class="btn btn-quiet" type="button" id="sampleBtn">
+                  <i data-lucide="shuffle" class="icon"></i>
+                  Sample
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title"><i data-lucide="braces" class="icon"></i> Structured Output</h2>
+          </div>
+          <div class="panel-body">
+            <pre class="output" id="jsonOutput">{}</pre>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title"><i data-lucide="list-checks" class="icon"></i> Fund Priority Zones</h2>
+          </div>
+          <div class="panel-body" id="insightList"></div>
+        </section>
+      </aside>
+
+      <section class="workbench">
+        <div class="metric-grid" id="metrics"></div>
+
+        <section class="panel map-panel">
+          <div class="panel-header">
+            <h2 class="panel-title"><i data-lucide="map" class="icon"></i> Gap & Density Map</h2>
+            <div class="segmented" role="tablist" aria-label="Map focus">
+              <button class="segment active" type="button" data-focus="need">Need</button>
+              <button class="segment" type="button" data-focus="crowd">Crowd</button>
+              <button class="segment" type="button" data-focus="infra">Infra</button>
+            </div>
+          </div>
+          <div class="map-wrap">
+            <div id="map"></div>
+            <div class="fallback-map" id="fallbackMap" aria-label="Constituency heatmap"></div>
+            <div class="map-controls">
+              <label class="toggle"><input type="checkbox" id="complaintsLayer" checked> Complaints</label>
+              <label class="toggle"><input type="checkbox" id="infraLayer" checked> Gaps</label>
+              <label class="toggle"><input type="checkbox" id="crowdLayer" checked> Crowds</label>
+            </div>
+            <div class="map-legend" id="legend"></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title"><i data-lucide="inbox" class="icon"></i> Ranked Action Queue</h2>
+            <div class="segmented" role="tablist" aria-label="Queue filter">
+              <button class="segment active" type="button" data-filter="all">All</button>
+              <button class="segment" type="button" data-filter="critical">Critical</button>
+              <button class="segment" type="button" data-filter="water">Water</button>
+              <button class="segment" type="button" data-filter="health">Health</button>
+              <button class="segment" type="button" data-filter="road">Road</button>
+            </div>
+          </div>
+          <div class="queue-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Urgency</th>
+                  <th>Issue</th>
+                  <th>Location</th>
+                  <th>Category</th>
+                  <th>Repeats</th>
+                  <th>Signal</th>
+                </tr>
+              </thead>
+              <tbody id="queueBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const areaCatalog = [
+      { id: "ward-7", name: "Ward 7, Jaitpur", lat: 25.3254, lng: 82.9671, population: 62300, infraGap: 84, crowdRisk: 52, gapNote: "no overhead tank in west cluster", fundAction: "Repair pipeline, add tanker standposts" },
+      { id: "ward-12", name: "Ward 12, Shahganj", lat: 25.3055, lng: 82.9897, population: 54700, infraGap: 68, crowdRisk: 46, gapNote: "aging transformer corridor", fundAction: "Upgrade transformer and feeder line" },
+      { id: "rampur", name: "Rampur Kalan", lat: 25.3421, lng: 82.9392, population: 38800, infraGap: 91, crowdRisk: 38, gapNote: "PHC access beyond 5 km", fundAction: "Mobile health camp, PHC proposal" },
+      { id: "bhairavpur", name: "Bhairavpur", lat: 25.2919, lng: 82.9513, population: 41200, infraGap: 77, crowdRisk: 57, gapNote: "unpaved school approach road", fundAction: "Concrete link road and drain" },
+      { id: "azad-nagar", name: "Azad Nagar", lat: 25.3167, lng: 83.0185, population: 49300, infraGap: 56, crowdRisk: 64, gapNote: "encroached community land", fundAction: "Boundary survey, public hearing" },
+      { id: "shivpur", name: "Shivpur Basti", lat: 25.3638, lng: 82.9794, population: 35100, infraGap: 73, crowdRisk: 43, gapNote: "school roof and toilet repairs", fundAction: "School building repair package" },
+      { id: "nawabganj", name: "Nawabganj", lat: 25.2787, lng: 82.9905, population: 58600, infraGap: 62, crowdRisk: 71, gapNote: "market drainage choke point", fundAction: "Stormwater drain desilting" },
+      { id: "ganga-mela", name: "Ganga Mela Grounds", lat: 25.3192, lng: 83.0342, population: 18300, infraGap: 48, crowdRisk: 94, gapNote: "event exit bottleneck", fundAction: "Barricades, lights, medical kiosk" },
+      { id: "saraswati-vihar", name: "Saraswati Vihar", lat: 25.333, lng: 83.0048, population: 29700, infraGap: 69, crowdRisk: 49, gapNote: "high school over capacity", fundAction: "Classroom expansion" },
+      { id: "kabirpur", name: "Kabirpur", lat: 25.3033, lng: 82.9229, population: 33200, infraGap: 87, crowdRisk: 35, gapNote: "weak road and ambulance access", fundAction: "All-weather road and culvert" }
+    ];
+
+    const categoryMeta = {
+      water: { label: "Water", color: "#3066be", icon: "droplets" },
+      road: { label: "Road", color: "#8a5a21", icon: "route" },
+      electricity: { label: "Electricity", color: "#b9820f", icon: "zap" },
+      health: { label: "Health", color: "#c43d3d", icon: "heart-pulse" },
+      education: { label: "Education", color: "#7357b6", icon: "graduation-cap" },
+      land: { label: "Land", color: "#5f6c72", icon: "land-plot" },
+      sanitation: { label: "Sanitation", color: "#16845f", icon: "waves" },
+      crowd: { label: "Crowd", color: "#d97d2b", icon: "users" }
+    };
+
+    const demoComplaints = [
+      { text: "Ward 7 mein 6 din se nal mein paani nahi aa raha. Tanker sirf main road tak aata hai.", areaId: "ward-7", citizen: "Meena Devi", channel: "WhatsApp", language: "Hindi", daysAgo: 1 },
+      { text: "Jaitpur west side ka water pipeline phat gaya hai, ganda paani mix ho raha hai.", areaId: "ward-7", citizen: "Irfan Ali", channel: "Call Center", language: "Hindi", daysAgo: 2 },
+      { text: "Ward 7 me 40 parivar paani ke bina hain, school ke bachche bhi pareshaan hain.", areaId: "ward-7", citizen: "Rakesh Kumar", channel: "Jan Sunwai", language: "Hindi", daysAgo: 3 },
+      { text: "Bhairavpur se PHC tak road toot gaya, kal raat ambulance fas gayi thi.", areaId: "bhairavpur", citizen: "Sunita Yadav", channel: "WhatsApp", language: "Hindi", daysAgo: 0 },
+      { text: "Bhairavpur school approach road par barish me ghutne tak kichad, bachche gir rahe hain.", areaId: "bhairavpur", citizen: "Headmaster Singh", channel: "Letter", language: "Hindi", daysAgo: 6 },
+      { text: "Rampur Kalan mein doctor nahi milte. Pregnant women ko 15 km le jana padta hai.", areaId: "rampur", citizen: "ASHA Worker", channel: "Call Center", language: "Hindi", daysAgo: 1 },
+      { text: "Rampur Kalan health sub-centre band rehta hai, bukhar ke cases badh rahe hain.", areaId: "rampur", citizen: "Panchayat Member", channel: "Jan Sunwai", language: "Hindi", daysAgo: 4 },
+      { text: "Shahganj transformer kal blast hua, 300 gharon me bijli nahi hai.", areaId: "ward-12", citizen: "Anil Gupta", channel: "WhatsApp", language: "Hindi", daysAgo: 0 },
+      { text: "Ward 12 feeder line baar baar trip karti hai, raat bhar power cut hota hai.", areaId: "ward-12", citizen: "Priya Khan", channel: "Social Media", language: "Hindi", daysAgo: 5 },
+      { text: "Nawabganj market drain block hai, har monsoon dukano me paani bhar jata hai.", areaId: "nawabganj", citizen: "Market Association", channel: "Letter", language: "Hindi", daysAgo: 7 },
+      { text: "Nawabganj mein nala safai nahi hui, dengue ka darr hai.", areaId: "nawabganj", citizen: "Farzana Begum", channel: "WhatsApp", language: "Hindi", daysAgo: 2 },
+      { text: "Ganga Mela gate par bheed bahut zyada thi, exit narrow hai aur light nahi thi.", areaId: "ganga-mela", citizen: "Volunteer Team", channel: "Social Media", language: "Hindi", daysAgo: 1 },
+      { text: "Mela ground par medical camp aur drinking water points kam pad gaye.", areaId: "ganga-mela", citizen: "Event Officer", channel: "Call Center", language: "English", daysAgo: 2 },
+      { text: "Shivpur Basti primary school ki chhat tapakti hai, toilet bhi band hai.", areaId: "shivpur", citizen: "Sarla Devi", channel: "Jan Sunwai", language: "Hindi", daysAgo: 8 },
+      { text: "Saraswati Vihar high school mein 90 students ek class mein baithe hain.", areaId: "saraswati-vihar", citizen: "Parent Group", channel: "Letter", language: "English", daysAgo: 9 },
+      { text: "Kabirpur road par pulia toot chuki hai, gaadiyan gaon tak nahi pahunch paati.", areaId: "kabirpur", citizen: "Mahesh Nishad", channel: "WhatsApp", language: "Hindi", daysAgo: 3 },
+      { text: "Kabirpur me barish ke baad road kat jati hai, ambulance aur school van rukti hai.", areaId: "kabirpur", citizen: "Village Sabha", channel: "Jan Sunwai", language: "Hindi", daysAgo: 4 },
+      { text: "Azad Nagar mein shamshan ke paas zameen vivaad hai, boundary clear nahi hai.", areaId: "azad-nagar", citizen: "RWA Secretary", channel: "Letter", language: "Hindi", daysAgo: 11 },
+      { text: "Azad Nagar bus stop ke paas illegal parking se election rally ke din jam lag gaya.", areaId: "azad-nagar", citizen: "Traffic Volunteer", channel: "Social Media", language: "Hindi", daysAgo: 2 },
+      { text: "Ward 7 paani issue par 20 logon ne complaint diya, abhi tak repair nahi hua.", areaId: "ward-7", citizen: "Youth Club", channel: "WhatsApp", language: "Hindi", daysAgo: 0 }
+    ];
+
+    const sampleTexts = [
+      "PHC ke bahar 2 ghante line lagti hai, doctor sirf hafte mein ek din aate hain.",
+      "Election rally ke baad market road par crowd jam hua, police barricade kam the.",
+      "School ke paas street light nahi hai, bachche subah andhere mein jaate hain.",
+      "Teen mahine se land mutation file pending hai, dono taraf tanav badh raha hai.",
+      "Nal ka paani peela aa raha hai aur bachche beemar pad rahe hain.",
+      "Road par bada gadda hai, kal bike accident hua aur aadmi injured hai."
+    ];
+
+    const state = {
+      complaints: [],
+      selectedFilter: "all",
+      mapFocus: "need",
+      leafletReady: false,
+      map: null,
+      layers: {
+        complaints: null,
+        infra: null,
+        crowd: null
+      }
+    };
+
+    const els = {
+      form: document.getElementById("complaintForm"),
+      text: document.getElementById("complaintText"),
+      locality: document.getElementById("locality"),
+      channel: document.getElementById("channel"),
+      citizen: document.getElementById("citizen"),
+      language: document.getElementById("language"),
+      output: document.getElementById("jsonOutput"),
+      metrics: document.getElementById("metrics"),
+      queue: document.getElementById("queueBody"),
+      insights: document.getElementById("insightList"),
+      toast: document.getElementById("toast"),
+      legend: document.getElementById("legend"),
+      fallbackMap: document.getElementById("fallbackMap"),
+      map: document.getElementById("map")
+    };
+
+    const normalize = (value) => value.toLowerCase().normalize("NFKD").replace(/[^\w\s]/g, " ").replace(/\s+/g, " ").trim();
+    const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+    const areaById = (id) => areaCatalog.find((area) => area.id === id) || areaCatalog[0];
+    const byScore = (a, b) => b.urgencyScore - a.urgencyScore || b.createdAt - a.createdAt;
+    const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      "\"": "&quot;",
+      "'": "&#039;"
+    }[char]));
+
+    function classifyComplaint(input, previousComplaints) {
+      const text = input.text.trim();
+      const normalized = normalize(text);
+      const area = areaById(input.areaId);
+      const categoryScores = {
+        water: scoreWords(normalized, ["paani", "pani", "water", "nal", "pipeline", "tanker", "handpump", "drinking", "peela", "ganda"]),
+        road: scoreWords(normalized, ["road", "sadak", "gadda", "pul", "pulia", "kichad", "ambulance", "van", "link road"]),
+        electricity: scoreWords(normalized, ["bijli", "electric", "power", "transformer", "feeder", "trip", "light", "cut"]),
+        health: scoreWords(normalized, ["health", "doctor", "phc", "hospital", "bukhar", "dengue", "pregnant", "medical", "beemar", "injured"]),
+        education: scoreWords(normalized, ["school", "class", "student", "teacher", "toilet", "chhat", "roof", "bachche"]),
+        land: scoreWords(normalized, ["land", "zameen", "mutation", "boundary", "vivaad", "encroach", "shamshan"]),
+        sanitation: scoreWords(normalized, ["drain", "nala", "sewer", "flood", "monsoon", "barish", "safai", "dengue"]),
+        crowd: scoreWords(normalized, ["bheed", "crowd", "mela", "rally", "jam", "barricade", "stampede", "exit"])
+      };
+
+      let category = Object.keys(categoryScores).sort((a, b) => categoryScores[b] - categoryScores[a])[0];
+      if (!categoryScores[category]) category = "land";
+      if (category === "sanitation" && categoryScores.water > 1 && normalized.includes("paani")) category = "water";
+      if (category === "crowd" && categoryScores.health > 1 && normalized.includes("medical")) category = "health";
+
+      const issueTokens = extractIssueTokens(normalized, category);
+      const issueKey = `${input.areaId}:${category}:${issueTokens.slice(0, 3).join("-") || category}`;
+      const repeats = previousComplaints.filter((item) => {
+        if (item.areaId !== input.areaId || item.category !== category) return false;
+        const overlap = issueTokens.filter((token) => item.issueTokens.includes(token)).length;
+        return overlap >= 1 || item.issueKey === issueKey;
+      }).length + 1;
+
+      const severitySignals = {
+        outage: scoreWords(normalized, ["nahi aa raha", "band", "no water", "no power", "cut", "blast", "toot", "broken"]),
+        safety: scoreWords(normalized, ["accident", "injured", "ambulance", "stampede", "pregnant", "dengue", "beemar", "bukhar", "ganda", "contaminated"]),
+        duration: scoreWords(normalized, ["din", "day", "week", "hafte", "mahine", "month", "monsoon", "baar baar", "har"]),
+        vulnerable: scoreWords(normalized, ["bachche", "children", "students", "pregnant", "elderly", "school", "hospital"]),
+        crowd: scoreWords(normalized, ["bheed", "crowd", "mela", "rally", "exit", "jam"])
+      };
+
+      let score = 25;
+      score += categoryScores[category] * 7;
+      score += severitySignals.outage * 7;
+      score += severitySignals.safety * 9;
+      score += severitySignals.duration * 4;
+      score += severitySignals.vulnerable * 5;
+      score += severitySignals.crowd * 4;
+      score += Math.min(24, (repeats - 1) * 8);
+      score += Math.round(area.infraGap / 12);
+      if (normalized.match(/\b(40|50|80|90|300|hazaar|lakh|parivar|ghar)\b/)) score += 8;
+      if (input.channel === "Jan Sunwai" || input.channel === "Call Center") score += 3;
+
+      const urgencyScore = clamp(Math.round(score), 18, 100);
+      const priority = urgencyScore >= 85 ? "Critical" : urgencyScore >= 70 ? "High" : urgencyScore >= 50 ? "Moderate" : "Routine";
+      const sentiment = severitySignals.safety || severitySignals.outage >= 2 ? "distressed" : urgencyScore >= 70 ? "concerned" : "routine";
+      const summary = makeSummary(category, area.name, text);
+
+      return {
+        id: crypto.randomUUID ? crypto.randomUUID() : `c-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        citizen: input.citizen || "Anonymous",
+        channel: input.channel,
+        language: input.language,
+        areaId: input.areaId,
+        location: area.name,
+        lat: area.lat + (Math.random() - 0.5) * 0.008,
+        lng: area.lng + (Math.random() - 0.5) * 0.008,
+        category,
+        categoryLabel: categoryMeta[category].label,
+        urgencyScore,
+        priority,
+        repeats,
+        sentiment,
+        summary,
+        text,
+        issueKey,
+        issueTokens,
+        extractedSignals: {
+          infrastructure_gap: area.gapNote,
+          repeated_reports: repeats,
+          safety_terms: severitySignals.safety,
+          duration_terms: severitySignals.duration,
+          vulnerable_groups: severitySignals.vulnerable
+        },
+        recommendedAction: recommendAction(category, priority, area),
+        modelSource: "Local demo triage",
+        status: "Unresolved",
+        createdAt: Date.now()
+      };
+    }
+
+    function scoreWords(text, terms) {
+      return terms.reduce((sum, term) => sum + (text.includes(term) ? 1 : 0), 0);
+    }
+
+    function extractIssueTokens(text, category) {
+      const dictionary = {
+        water: ["paani", "pani", "water", "nal", "pipeline", "tanker", "ganda", "peela"],
+        road: ["road", "sadak", "gadda", "pulia", "kichad", "ambulance", "van"],
+        electricity: ["bijli", "power", "transformer", "feeder", "light", "trip"],
+        health: ["doctor", "phc", "hospital", "bukhar", "dengue", "pregnant", "medical", "beemar"],
+        education: ["school", "class", "student", "toilet", "roof", "chhat", "teacher"],
+        land: ["land", "zameen", "mutation", "boundary", "vivaad", "encroach"],
+        sanitation: ["drain", "nala", "sewer", "flood", "monsoon", "safai"],
+        crowd: ["bheed", "crowd", "mela", "rally", "exit", "jam", "barricade"]
+      };
+      return dictionary[category].filter((term) => text.includes(term));
+    }
+
+    function makeSummary(category, location, text) {
+      const clean = text.replace(/\s+/g, " ").trim();
+      const short = clean.length > 88 ? `${clean.slice(0, 85)}...` : clean;
+      return `${categoryMeta[category].label} issue in ${location}: ${short}`;
+    }
+
+    function recommendAction(category, priority, area) {
+      const actionMap = {
+        water: "Dispatch Jal Nigam repair team and tanker schedule",
+        road: "Send PWD inspection and estimate link-road work",
+        electricity: "Escalate transformer and feeder repair to DISCOM",
+        health: "Open temporary camp and log PHC staffing gap",
+        education: "Send school works estimate to district engineer",
+        land: "Schedule revenue survey and mediation hearing",
+        sanitation: "Deploy drain cleaning crew before next rainfall",
+        crowd: "Add crowd-control barricades, lights, water, first-aid point"
+      };
+      const prefix = priority === "Critical" ? "Same-day: " : priority === "High" ? "This week: " : "Track: ";
+      return `${prefix}${actionMap[category]}; ${area.fundAction}.`;
+    }
+
+    function seedData() {
+      state.complaints = [];
+      demoComplaints.forEach((demo) => {
+        const item = classifyComplaint({
+          text: demo.text,
+          areaId: demo.areaId,
+          citizen: demo.citizen,
+          channel: demo.channel,
+          language: demo.language
+        }, state.complaints);
+        item.createdAt = Date.now() - demo.daysAgo * 86400000 - Math.round(Math.random() * 3600000);
+        state.complaints.push(item);
+      });
+      state.complaints.sort(byScore);
+      els.output.textContent = JSON.stringify(toPublicJson(state.complaints[0]), null, 2);
+    }
+
+    function toPublicJson(item) {
+      if (!item) return {};
+      return {
+        complaint_id: item.id,
+        category: item.category,
+        location: item.location,
+        urgency_score: item.urgencyScore,
+        priority: item.priority,
+        repeated_reports: item.repeats,
+        sentiment: item.sentiment,
+        summary: item.summary,
+        recommended_action: item.recommendedAction,
+        model_source: item.modelSource,
+        extracted_signals: item.extractedSignals,
+        geo: { lat: Number(item.lat.toFixed(5)), lng: Number(item.lng.toFixed(5)) }
+      };
+    }
+
+    function initForm() {
+      els.locality.innerHTML = areaCatalog.map((area) => `<option value="${area.id}">${area.name}</option>`).join("");
+      els.form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (!els.text.value.trim()) return;
+        const submitter = event.submitter;
+        if (submitter) submitter.disabled = true;
+        try {
+          await addComplaint({
+            text: els.text.value,
+            areaId: els.locality.value,
+            citizen: els.citizen.value,
+            channel: els.channel.value,
+            language: els.language.value
+          });
+        } finally {
+          if (submitter) submitter.disabled = false;
+        }
+      });
+
+      document.getElementById("surgeBtn").addEventListener("click", () => {
+        const surge = [
+          "Ward 7 mein phir se paani band hai, colony ke 50 ghar affected hain.",
+          "Ward 7 pipeline repair ke baad bhi ganda paani aa raha hai.",
+          "Ward 7 tanker nahi pahucha, logon ne paani ke liye road block kiya."
+        ];
+        surge.forEach((text, index) => {
+          addComplaint({
+            text,
+            areaId: "ward-7",
+            citizen: `Resident Group ${index + 1}`,
+            channel: index === 2 ? "Social Media" : "WhatsApp",
+            language: "Hindi"
+          }, false, false);
+        });
+        renderAll();
+        showToast("Water complaints in Ward 7 escalated through repetition.");
+      });
+
+      document.getElementById("sampleBtn").addEventListener("click", () => {
+        const text = sampleTexts[Math.floor(Math.random() * sampleTexts.length)];
+        const area = areaCatalog[Math.floor(Math.random() * areaCatalog.length)];
+        els.text.value = text;
+        els.locality.value = area.id;
+        els.citizen.value = "Sample Citizen";
+      });
+
+      document.getElementById("resetBtn").addEventListener("click", () => {
+        seedData();
+        renderAll();
+        showToast("Demo data reset.");
+      });
+
+      document.querySelectorAll("[data-filter]").forEach((button) => {
+        button.addEventListener("click", () => {
+          document.querySelectorAll("[data-filter]").forEach((item) => item.classList.remove("active"));
+          button.classList.add("active");
+          state.selectedFilter = button.dataset.filter;
+          renderQueue();
+        });
+      });
+
+      document.querySelectorAll("[data-focus]").forEach((button) => {
+        button.addEventListener("click", () => {
+          document.querySelectorAll("[data-focus]").forEach((item) => item.classList.remove("active"));
+          button.classList.add("active");
+          state.mapFocus = button.dataset.focus;
+          renderMapLayers();
+          renderLegend();
+        });
+      });
+
+      ["complaintsLayer", "infraLayer", "crowdLayer"].forEach((id) => {
+        document.getElementById(id).addEventListener("change", renderMapLayers);
+      });
+    }
+
+    async function addComplaint(input, immediateRender = true, useRemote = true) {
+      const item = classifyComplaint(input, state.complaints);
+      if (useRemote) {
+        const remote = await classifyWithClaude(input, item);
+        if (remote) mergeRemoteTriage(item, remote);
+      }
+      state.complaints.push(item);
+      state.complaints.sort(byScore);
+      els.output.textContent = JSON.stringify(toPublicJson(item), null, 2);
+      if (immediateRender) {
+        renderAll();
+        showToast(`${item.priority} ${item.categoryLabel.toLowerCase()} complaint ranked at score ${item.urgencyScore} via ${item.modelSource}.`);
+      }
+    }
+
+    async function classifyWithClaude(input, localItem) {
+      if (location.protocol === "file:") return null;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 6000);
+      try {
+        const response = await fetch("/api/triage", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            complaint: input,
+            area: areaById(input.areaId),
+            local_context: toPublicJson(localItem)
+          }),
+          signal: controller.signal
+        });
+        if (!response.ok) return null;
+        const data = await response.json();
+        return data.enabled && data.triage ? data.triage : null;
+      } catch (error) {
+        return null;
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    function mergeRemoteTriage(item, triage) {
+      const category = String(triage.category || "").toLowerCase();
+      if (categoryMeta[category]) {
+        item.category = category;
+        item.categoryLabel = categoryMeta[category].label;
+      }
+      item.urgencyScore = clamp(Number(triage.urgency_score) || item.urgencyScore, 18, 100);
+      item.priority = triage.priority || (item.urgencyScore >= 85 ? "Critical" : item.urgencyScore >= 70 ? "High" : item.urgencyScore >= 50 ? "Moderate" : "Routine");
+      item.repeats = Number(triage.repeated_reports) || item.repeats;
+      item.sentiment = triage.sentiment || item.sentiment;
+      item.summary = triage.summary || item.summary;
+      item.recommendedAction = triage.recommended_action || item.recommendedAction;
+      item.extractedSignals = { ...item.extractedSignals, ...(triage.extracted_signals || {}) };
+      item.modelSource = "Claude API";
+    }
+
+    function renderAll() {
+      renderMetrics();
+      renderInsights();
+      renderQueue();
+      renderMapLayers();
+      renderLegend();
+      renderLucide();
+    }
+
+    function renderMetrics() {
+      const total = state.complaints.length;
+      const critical = state.complaints.filter((item) => item.priority === "Critical").length;
+      const unresolved = state.complaints.filter((item) => item.status === "Unresolved").length;
+      const topArea = aggregateAreas()[0];
+      const topCategory = aggregateCategories()[0];
+      const repeatClusters = state.complaints.filter((item) => item.repeats >= 3).length;
+
+      const metrics = [
+        { label: "Unresolved", value: unresolved, note: `${critical} critical requiring same-day follow-up` },
+        { label: "Top hotspot", value: topArea ? topArea.name.split(",")[0] : "-", note: topArea ? `${topArea.count} complaints, need score ${topArea.needScore}` : "No reports" },
+        { label: "Trending category", value: topCategory ? categoryMeta[topCategory.category].label : "-", note: topCategory ? `${topCategory.count} reports across ${topCategory.areas} areas` : "No reports" },
+        { label: "Repeat signals", value: repeatClusters, note: `${repeatClusters ? "Auto-escalation active" : "No repeated clusters"}` }
+      ];
+
+      els.metrics.innerHTML = metrics.map((metric, index) => `
+        <article class="metric">
+          <p class="metric-label">${metric.label}</p>
+          <p class="metric-value">${metric.value}</p>
+          <p class="metric-note ${index === 0 && critical ? "trend-up" : "trend-steady"}">${metric.note}</p>
+        </article>
+      `).join("");
+    }
+
+    function aggregateAreas() {
+      return areaCatalog.map((area) => {
+        const complaints = state.complaints.filter((item) => item.areaId === area.id);
+        const count = complaints.length;
+        const avgUrgency = count ? Math.round(complaints.reduce((sum, item) => sum + item.urgencyScore, 0) / count) : 0;
+        const critical = complaints.filter((item) => item.priority === "Critical").length;
+        const categorySpread = new Set(complaints.map((item) => item.category)).size;
+        const needScore = clamp(Math.round((avgUrgency * 0.46) + (Math.min(count, 8) * 6) + (area.infraGap * 0.22) + (area.crowdRisk * 0.12) + (critical * 6) + (categorySpread * 2)), 0, 100);
+        return { ...area, complaints, count, avgUrgency, critical, categorySpread, needScore };
+      }).sort((a, b) => b.needScore - a.needScore);
+    }
+
+    function aggregateCategories() {
+      const grouped = Object.keys(categoryMeta).map((category) => {
+        const complaints = state.complaints.filter((item) => item.category === category);
+        return {
+          category,
+          count: complaints.length,
+          areas: new Set(complaints.map((item) => item.areaId)).size
+        };
+      });
+      return grouped.sort((a, b) => b.count - a.count);
+    }
+
+    function renderInsights() {
+      const areas = aggregateAreas().slice(0, 5);
+      els.insights.innerHTML = areas.map((area, index) => {
+        const topComplaint = area.complaints.slice().sort(byScore)[0];
+        const dominant = dominantCategory(area.complaints);
+        const detail = topComplaint ? topComplaint.summary.replace(/^.*?: /, "") : "no unresolved report";
+        return `
+          <article class="insight">
+            <div class="insight-top">
+              <div>
+                <h3>${escapeHtml(area.name)}</h3>
+                <p>${escapeHtml(area.gapNote)}; ${escapeHtml(detail)}</p>
+              </div>
+              <span class="rank">${index + 1}</span>
+            </div>
+            <div class="mini-facts">
+              <span class="badge badge-${priorityClass(area.needScore >= 85 ? "Critical" : area.needScore >= 70 ? "High" : "Moderate")}">Need ${area.needScore}</span>
+              <span class="badge">${area.count} reports</span>
+              <span class="badge" style="color:${dominant ? categoryMeta[dominant].color : "var(--muted)"}">${dominant ? categoryMeta[dominant].label : "Monitor"}</span>
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    function dominantCategory(complaints) {
+      if (!complaints.length) return null;
+      const counts = complaints.reduce((acc, item) => {
+        acc[item.category] = (acc[item.category] || 0) + 1;
+        return acc;
+      }, {});
+      return Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+    }
+
+    function renderQueue() {
+      const filtered = state.complaints
+        .filter((item) => {
+          if (state.selectedFilter === "all") return true;
+          if (state.selectedFilter === "critical") return item.priority === "Critical";
+          return item.category === state.selectedFilter;
+        })
+        .sort(byScore);
+
+      els.queue.innerHTML = filtered.map((item) => {
+        const meta = categoryMeta[item.category];
+        const color = scoreColor(item.urgencyScore);
+        return `
+          <tr>
+            <td>
+              <div class="score">
+                <strong>${item.urgencyScore}</strong>
+                <div class="scorebar"><span style="--w:${item.urgencyScore}%;--c:${color}"></span></div>
+                <span class="badge badge-${priorityClass(item.priority)}">${item.priority}</span>
+              </div>
+            </td>
+            <td class="complaint-text">${escapeHtml(item.text)}</td>
+            <td>${escapeHtml(item.location)}</td>
+            <td><span class="badge"><span class="category-dot" style="--dot:${meta.color}"></span>${meta.label}</span></td>
+            <td>${item.repeats}</td>
+            <td>${escapeHtml(item.recommendedAction)}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function priorityClass(priority) {
+      return String(priority).toLowerCase();
+    }
+
+    function scoreColor(score) {
+      if (score >= 85) return "#c43d3d";
+      if (score >= 70) return "#d97d2b";
+      if (score >= 50) return "#b9820f";
+      return "#16845f";
+    }
+
+    function initMapWhenReady() {
+      let tries = 0;
+      const timer = setInterval(() => {
+        tries += 1;
+        if (window.L) {
+          clearInterval(timer);
+          initLeafletMap();
+          renderAll();
+        } else if (tries > 20) {
+          clearInterval(timer);
+          state.leafletReady = false;
+          els.map.style.display = "none";
+          els.fallbackMap.style.display = "block";
+          renderAll();
+        }
+      }, 150);
+    }
+
+    function initLeafletMap() {
+      state.leafletReady = true;
+      els.map.style.display = "block";
+      els.fallbackMap.style.display = "none";
+      state.map = L.map("map", { zoomControl: true, scrollWheelZoom: true }).setView([25.319, 82.979], 12);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap"
+      }).addTo(state.map);
+      state.layers.complaints = L.layerGroup().addTo(state.map);
+      state.layers.infra = L.layerGroup().addTo(state.map);
+      state.layers.crowd = L.layerGroup().addTo(state.map);
+    }
+
+    function renderMapLayers() {
+      if (!state.leafletReady || !state.map) {
+        renderFallbackMap();
+        return;
+      }
+
+      els.map.style.display = "block";
+      els.fallbackMap.style.display = "none";
+      Object.values(state.layers).forEach((layer) => layer && layer.clearLayers());
+      const showComplaints = document.getElementById("complaintsLayer").checked;
+      const showInfra = document.getElementById("infraLayer").checked;
+      const showCrowd = document.getElementById("crowdLayer").checked;
+      const areaAgg = aggregateAreas();
+
+      if (showInfra) {
+        areaAgg.forEach((area) => {
+          const fill = state.mapFocus === "infra" ? "#3066be" : "#16845f";
+          const radius = 420 + area.infraGap * 12;
+          L.circle([area.lat, area.lng], {
+            radius,
+            color: fill,
+            weight: 1,
+            fillColor: fill,
+            fillOpacity: 0.09 + area.infraGap / 850,
+            opacity: 0.38
+          }).bindPopup(`<div class="popup"><div class="popup-title">${escapeHtml(area.name)}</div><div class="popup-meta">${escapeHtml(area.gapNote)}</div><div class="popup-meta">Need score ${area.needScore}; infra gap ${area.infraGap}</div></div>`)
+            .addTo(state.layers.infra);
+        });
+      }
+
+      if (showCrowd) {
+        areaAgg.filter((area) => area.crowdRisk >= 45).forEach((area) => {
+          L.circle([area.lat, area.lng], {
+            radius: 260 + area.crowdRisk * 10,
+            color: "#d97d2b",
+            weight: 1,
+            dashArray: "4 5",
+            fillColor: "#d97d2b",
+            fillOpacity: state.mapFocus === "crowd" ? 0.18 : 0.08,
+            opacity: 0.52
+          }).bindPopup(`<div class="popup"><div class="popup-title">${escapeHtml(area.name)}</div><div class="popup-meta">Crowd stress ${area.crowdRisk}/100</div><div class="popup-meta">${escapeHtml(area.fundAction)}</div></div>`)
+            .addTo(state.layers.crowd);
+        });
+      }
+
+      if (showComplaints) {
+        state.complaints.forEach((item) => {
+          const color = categoryMeta[item.category].color;
+          const radius = 7 + (item.urgencyScore / 9) + Math.min(8, item.repeats * 1.3);
+          L.circleMarker([item.lat, item.lng], {
+            radius,
+            color: "#ffffff",
+            weight: 1.8,
+            fillColor: color,
+            fillOpacity: item.priority === "Critical" ? 0.92 : 0.78,
+            opacity: 1
+          }).bindPopup(`
+            <div class="popup">
+              <div class="popup-title">${escapeHtml(item.categoryLabel)} - ${escapeHtml(item.location)}</div>
+              <div class="popup-meta">${escapeHtml(item.text)}</div>
+              <div class="popup-score">Urgency ${item.urgencyScore} - ${item.priority}</div>
+              <div class="popup-meta">${escapeHtml(item.recommendedAction)}</div>
+            </div>
+          `).addTo(state.layers.complaints);
+        });
+      }
+    }
+
+    function renderFallbackMap() {
+      els.map.style.display = "none";
+      els.fallbackMap.style.display = "block";
+      const showComplaints = document.getElementById("complaintsLayer").checked;
+      const showInfra = document.getElementById("infraLayer").checked;
+      const showCrowd = document.getElementById("crowdLayer").checked;
+      const minLat = Math.min(...areaCatalog.map((area) => area.lat));
+      const maxLat = Math.max(...areaCatalog.map((area) => area.lat));
+      const minLng = Math.min(...areaCatalog.map((area) => area.lng));
+      const maxLng = Math.max(...areaCatalog.map((area) => area.lng));
+      const toPoint = (lat, lng) => {
+        const x = 8 + ((lng - minLng) / (maxLng - minLng)) * 84;
+        const y = 88 - ((lat - minLat) / (maxLat - minLat)) * 76;
+        return { x, y };
+      };
+
+      const roads = [
+        { x: 14, y: 28, w: 72, rot: 16 },
+        { x: 9, y: 69, w: 78, rot: -11 },
+        { x: 42, y: 12, w: 62, rot: 88 },
+        { x: 20, y: 49, w: 62, rot: 2 }
+      ].map((road) => `<span class="fallback-road" style="left:${road.x}%;top:${road.y}%;width:${road.w}%;transform:rotate(${road.rot}deg)"></span>`).join("");
+
+      const infra = showInfra ? aggregateAreas().map((area) => {
+        const point = toPoint(area.lat, area.lng);
+        const size = 34 + area.infraGap / 1.7;
+        return `<span class="fallback-marker" title="${area.name}" style="left:${point.x}%;top:${point.y}%;--size:${size}px;--color:rgba(22,132,95,0.18);border-color:rgba(22,132,95,0.18);color:#175f49"></span>`;
+      }).join("") : "";
+
+      const crowd = showCrowd ? aggregateAreas().filter((area) => area.crowdRisk > 48).map((area) => {
+        const point = toPoint(area.lat, area.lng);
+        const size = 28 + area.crowdRisk / 1.5;
+        return `<span class="fallback-marker" title="${area.name}" style="left:${point.x}%;top:${point.y}%;--size:${size}px;--color:rgba(217,125,43,0.22);border-color:rgba(217,125,43,0.22);color:#9b5019"></span>`;
+      }).join("") : "";
+
+      const complaints = showComplaints ? state.complaints.map((item) => {
+        const point = toPoint(item.lat, item.lng);
+        const size = 12 + item.urgencyScore / 5;
+        const label = item.urgencyScore >= 85 ? "!" : "";
+        return `<span class="fallback-marker" title="${item.location}: ${item.urgencyScore}" style="left:${point.x}%;top:${point.y}%;--size:${size}px;--color:${categoryMeta[item.category].color}">${label}</span>`;
+      }).join("") : "";
+
+      els.fallbackMap.innerHTML = `${roads}${infra}${crowd}${complaints}`;
+      els.fallbackMap.style.display = "block";
+    }
+
+    function renderLegend() {
+      const total = state.complaints.length;
+      const critical = state.complaints.filter((item) => item.priority === "Critical").length;
+      const avgNeed = Math.round(aggregateAreas().reduce((sum, area) => sum + area.needScore, 0) / areaCatalog.length);
+      els.legend.innerHTML = `
+        <div class="legend-row"><span class="legend-key" style="color:#c43d3d"><span class="swatch"></span> Critical complaints</span><strong>${critical}</strong></div>
+        <div class="legend-row"><span class="legend-key" style="color:#16845f"><span class="swatch"></span> Infra gap radius</span><strong>${avgNeed} avg need</strong></div>
+        <div class="legend-row"><span class="legend-key" style="color:#d97d2b"><span class="swatch"></span> Event crowd stress</span><strong>${state.mapFocus}</strong></div>
+        <div class="legend-row"><span>Total mapped reports</span><strong>${total}</strong></div>
+      `;
+    }
+
+    function showToast(message) {
+      els.toast.textContent = message;
+      els.toast.classList.add("show");
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => els.toast.classList.remove("show"), 2800);
+    }
+
+    function renderLucide() {
+      if (window.lucide) {
+        window.lucide.createIcons({ attrs: { "stroke-width": 2 } });
+      }
+    }
+
+    function updateClock() {
+      const formatter = new Intl.DateTimeFormat("en-IN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "short" });
+      document.getElementById("demoClock").textContent = `Live demo - ${formatter.format(new Date())}`;
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      initForm();
+      seedData();
+      updateClock();
+      setInterval(updateClock, 60000);
+      renderAll();
+      initMapWhenReady();
+    });
+  </script>
+</body>
+</html>
