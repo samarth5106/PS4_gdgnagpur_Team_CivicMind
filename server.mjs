@@ -97,4 +97,4 @@ async function handleTriage(req, res) {
 }
 
 function buildTriagePrompt(payload) {
-  return `You are triaging complaints for an Indian Member of Parliament constituency command center.
+  return `You are triaging complaints for an Indian Member of Parliament constituency command center.`
