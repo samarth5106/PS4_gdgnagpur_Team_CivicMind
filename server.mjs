@@ -1,200 +1,100 @@
- th {
- position: sticky;
- top: 0;
- z-index: 1;
- background: #f8faf8;
- color: var(--muted);
- font-size: 0.72rem;
- font-weight: 790;
- text-transform: uppercase;
- letter-spacing: 0.06em;
- }
+import { createServer } from "node:http";
+import { readFile } from "node:fs/promises";
+import { extname, resolve, sep } from "node:path";
 
- td:first-child,
- th:first-child {
- padding-left: 16px;
- }
+const port = Number(process.env.PORT || 8000);
+const anthropicKey = process.env.ANTHROPIC_API_KEY;
+const claudeModel = process.env.CLAUDE_MODEL || "claude-3-5-haiku-latest";
+const root = resolve(process.cwd());
 
- td:last-child,
- th:last-child {
- padding-right: 16px;
- }
+const types = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".mjs": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".svg": "image/svg+xml"
+};
 
- tr:hover td {
- background: #fbfcfb;
- }
+createServer(async (req, res) => {
+  try {
+    const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+    if (req.method === "POST" && url.pathname === "/api/triage") {
+      await handleTriage(req, res);
+      return;
+    }
 
- .complaint-text {
- max-width: 360px;
- line-height: 1.35;
- }
+    const pathname = url.pathname === "/" ? "/index.html" : decodeURIComponent(url.pathname);
+    const target = resolve(root, `.${pathname}`);
 
- .badge {
- display: inline-flex;
- align-items: center;
- gap: 6px;
- min-height: 24px;
- padding: 4px 7px;
- border-radius: 999px;
- border: 1px solid var(--line);
- background: #fff;
- color: var(--muted);
- font-size: 0.74rem;
- font-weight: 750;
- white-space: nowrap;
- }
+    if (target !== root && !target.startsWith(root + sep)) {
+      res.writeHead(403);
+      res.end("Forbidden");
+      return;
+    }
 
- .badge-critical {
- border-color: rgba(196,61,61,0.32);
- background: rgba(196,61,61,0.08);
- color: #9f2929;
- }
+    const body = await readFile(target);
+    res.writeHead(200, {
+      "Content-Type": types[extname(target)] || "application/octet-stream",
+      "Cache-Control": "no-store"
+    });
+    res.end(body);
+  } catch (error) {
+    res.writeHead(error.code === "ENOENT" ? 404 : 500);
+    res.end(error.code === "ENOENT" ? "Not found" : "Server error");
+  }
+}).listen(port, () => {
+  console.log(`SansadSetu demo running at http://localhost:${port}`);
+});
 
- .badge-high {
- border-color: rgba(217,125,43,0.36);
- background: rgba(217,125,43,0.11);
- color: #a25414;
- }
+async function handleTriage(req, res) {
+  const payload = await readJson(req);
+  if (!anthropicKey) {
+    sendJson(res, 200, {
+      enabled: false,
+      reason: "ANTHROPIC_API_KEY is not set; browser used local demo triage."
+    });
+    return;
+  }
 
- .badge-moderate {
- border-color: rgba(185,130,15,0.32);
- background: rgba(185,130,15,0.1);
- color: #7b570a;
- }
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": anthropicKey,
+      "anthropic-version": "2023-06-01"
+    },
+    body: JSON.stringify({
+      model: claudeModel,
+      max_tokens: 700,
+      temperature: 0,
+      messages: [
+        {
+          role: "user",
+          content: buildTriagePrompt(payload)
+        }
+      ]
+    })
+  });
 
- .score {
- display: grid;
- gap: 5px;
- min-width: 88px;
- }
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    sendJson(res, 502, {
+      enabled: true,
+      error: "Claude API request failed",
+      detail: data.error?.message || response.statusText
+    });
+    return;
+  }
 
- .score strong {
- font-size: 1.08rem;
- line-height: 1;
- }
+  const text = (data.content || []).map((part) => part.text || "").join("\n").trim();
+  const triage = parseJsonBlock(text);
+  sendJson(res, 200, {
+    enabled: true,
+    model: claudeModel,
+    triage
+  });
+}
 
- .scorebar {
- height: 6px;
- overflow: hidden;
- border-radius: 999px;
- background: #e5ebe6;
- }
-
- .scorebar span {
- display: block;
- width: var(--w);
- height: 100%;
- border-radius: inherit;
- background: var(--c);
- }
-
- .category-dot {
- width: 9px;
- height: 9px;
- border-radius: 50%;
- background: var(--dot);
- flex: 0 0 auto;
- }
-
- .insight-grid {
- display: grid;
- grid-template-columns: repeat(3, minmax(0, 1fr));
- gap: 12px;
- }
-
- .insight {
- border: 1px solid var(--line);
- border-radius: var(--radius);
- background: #fff;
- padding: 12px;
- min-height: 142px;
- }
-
- .insight-top {
- display: flex;
- justify-content: space-between;
- gap: 10px;
- align-items: start;
- }
-
- .rank {
- width: 30px;
- height: 30px;
- display: grid;
- place-items: center;
- border-radius: var(--radius);
- color: #fff;
- background: #1e5948;
- font-size: 0.82rem;
- font-weight: 820;
- flex: 0 0 auto;
- }
-
- .insight h3 {
- margin: 0;
- font-size: 0.94rem;
- line-height: 1.2;
- }
-
- .insight p {
- margin: 8px 0 0;
- color: var(--muted);
- font-size: 0.82rem;
- line-height: 1.4;
- }
-
- .mini-facts {
- display: flex;
- flex-wrap: wrap;
- gap: 6px;
- margin-top: 10px;
- }
-
- .toast {
- position: fixed;
- right: 18px;
- bottom: 18px;
- z-index: 1000;
- display: none;
- width: min(390px, calc(100vw - 36px));
- padding: 12px 13px;
- border: 1px solid rgba(22, 132, 95, 0.32);
- border-radius: var(--radius);
- background: #fff;
- color: var(--ink);
- box-shadow: var(--shadow);
- font-weight: 720;
- line-height: 1.35;
- }
-
- .toast.show {
- display: block;
- animation: rise 0.24s ease;
- }
-
- @keyframes rise {
- from { transform: translateY(8px); opacity: 0; }
- to { transform: translateY(0); opacity: 1; }
- }
-
- .leaflet-popup-content-wrapper,
- .leaflet-popup-tip {
- border-radius: var(--radius);
- }
-
- .popup {
- min-width: 210px;
- display: grid;
- gap: 7px;
- font-family: var(--font);
- }
-
- .popup-title {
- font-weight: 800;
- color: var(--ink);
- }
-
- .popup-meta {
- color: var(--muted);
- font-size: 0.82rem;
- line-height: 1.35;
+function buildTriagePrompt(payload) {
+  return `You are triaging complaints for an Indian Member of Parliament constituency command center.
