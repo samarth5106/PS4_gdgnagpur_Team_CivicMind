@@ -97,4 +97,58 @@ async function handleTriage(req, res) {
 }
 
 function buildTriagePrompt(payload) {
-  return `You are triaging complaints for an Indian Member of Parliament constituency command center.`
+  return `You are triaging complaints for an Indian Member of Parliament constituency command center.
+Return only valid JSON. Do not include markdown.
+
+Allowed categories: water, road, electricity, health, education, land, sanitation, crowd.
+Priority must be one of: Critical, High, Moderate, Routine.
+Urgency score must be an integer from 0 to 100.
+
+Complaint payload:
+${JSON.stringify(payload, null, 2)}
+
+Return this exact JSON shape:
+{
+  "category": "water",
+  "location": "Ward or village name",
+  "urgency_score": 0,
+  "priority": "Moderate",
+  "sentiment": "routine",
+  "repeated_reports": 1,
+  "summary": "One sentence summary",
+  "recommended_action": "One operational next step",
+  "extracted_signals": {
+    "keywords": [],
+    "risk_factors": [],
+    "infrastructure_gap": ""
+  }
+}`;
+}
+
+function parseJsonBlock(text) {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start === -1 || end === -1 || end < start) {
+    throw new Error("Claude response did not contain JSON.");
+  }
+  return JSON.parse(text.slice(start, end + 1));
+}
+
+async function readJson(req) {
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of req) {
+    size += chunk.length;
+    if (size > 1_000_000) throw new Error("Payload too large.");
+    chunks.push(chunk);
+  }
+  const text = Buffer.concat(chunks).toString("utf8");
+  return text ? JSON.parse(text) : {};
+}
+
+function sendJson(res, status, payload) {
+  res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
+  res.end(JSON.stringify(payload));
+}
+
+
